@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profits Over Prophets | Stage Analysis Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #1c2333; --border: #30363d;
+    --accent: #f0b429; --green: #3fb950; --red: #f85149; --blue: #58a6ff;
+    --purple: #bc8cff; --orange: #fb8500; --text: #e6edf3; --muted: #8b949e;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 24px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo h1 { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .logo span { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  #last-updated { font-size: 11px; color: var(--muted); }
+  #scan-btn {
+    background: var(--accent); color: #000; border: none; padding: 8px 18px;
+    border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;
+  }
+  #scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+
+  /* CONVICTION BANNER */
+  .conviction-banner {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px;
+  }
+  .conv-panel {
+    border-radius: 12px; padding: 16px 20px; border: 2px solid;
+    position: relative; overflow: hidden;
+  }
+  .conv-panel::before {
+    content: ''; position: absolute; inset: 0; opacity: 0.06;
+  }
+  .conv-high { border-color: var(--green); background: rgba(63,185,80,0.06); }
+  .conv-high::before { background: var(--green); }
+  .conv-wait { border-color: var(--orange); background: rgba(251,133,0,0.06); }
+  .conv-wait::before { background: var(--orange); }
+  .conv-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .conv-icon { font-size: 22px; }
+  .conv-title { font-size: 14px; font-weight: 800; }
+  .conv-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .conv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .conv-chip {
+    padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    border: 1px solid;
+  }
+  .chip-green { background: rgba(63,185,80,0.15); border-color: var(--green); color: var(--green); }
+  .chip-orange { background: rgba(251,133,0,0.15); border-color: var(--orange); color: var(--orange); }
+  .chip-empty { color: var(--muted); font-size: 12px; font-style: italic; padding: 4px 0; }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* SECTOR TABS */
+  .sector-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .sector-tab {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer; font-size: 12px;
+    transition: all 0.15s;
+  }
+  .sector-tab.active, .sector-tab:hover {
+    background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700;
+  }
+
+  /* SECTION HEADERS */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  .section-title { font-size: 15px; font-weight: 700; }
+  .section-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid;
+  }
+  .badge-green { background: rgba(63,185,80,0.1); border-color: var(--green); color: var(--green); }
+  .badge-orange { background: rgba(251,133,0,0.1); border-color: var(--orange); color: var(--orange); }
+  .badge-yellow { background: rgba(240,180,41,0.1); border-color: var(--accent); color: var(--accent); }
+
+  .setups-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+
+  /* SETUP CARD */
+  .setup-card {
+    background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
+    padding: 0; display: flex; overflow: hidden; transition: border-color 0.2s;
+    cursor: pointer;
+  }
+  .setup-card:hover { border-color: var(--accent); }
+
+  /* LEFT CONVICTION STRIPE */
+  .conv-stripe {
+    width: 6px; flex-shrink: 0;
+  }
+  .stripe-fire { background: var(--green); }
+  .stripe-wait { background: var(--orange); }
+  .stripe-watch { background: var(--blue); }
+  .stripe-avoid { background: var(--red); }
+
+  .card-inner {
+    flex: 1; padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 62px 1fr 110px 110px 110px 130px 150px 110px;
+    align-items: center; gap: 12px;
+  }
+
+  /* CONVICTION BADGE — prominent */
+  .conv-badge-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .conv-badge {
+    padding: 5px 9px; border-radius: 8px; font-size: 11px; font-weight: 800;
+    text-align: center; line-height: 1.2; border: 1px solid;
+  }
+  .badge-fire { background: rgba(63,185,80,0.15); border-color: var(--green); color: var(--green); }
+  .badge-waitfor { background: rgba(251,133,0,0.15); border-color: var(--orange); color: var(--orange); }
+  .badge-watch { background: rgba(88,166,255,0.15); border-color: var(--blue); color: var(--blue); }
+  .badge-avoid { background: rgba(248,81,73,0.15); border-color: var(--red); color: var(--red); }
+  .ticker-sym { font-size: 15px; font-weight: 800; color: var(--accent); }
+  .ticker-name { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .setup-info h3 { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .pattern-tag {
+    display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px;
+    background: rgba(188,140,255,0.1); color: var(--purple);
+    border: 1px solid rgba(188,140,255,0.3); margin-right: 4px;
+  }
+  .sector-mini { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* WAIT-FOR BOX — key differentiator */
+  .waitfor-box {
+    grid-column: span 2;
+    background: rgba(251,133,0,0.07); border: 1px solid rgba(251,133,0,0.3);
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .waitfor-box.fire-box {
+    background: rgba(63,185,80,0.07); border-color: rgba(63,185,80,0.3);
+  }
+  .waitfor-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .wf-orange { color: var(--orange); }
+  .wf-green { color: var(--green); }
+  .waitfor-items { display: flex; flex-direction: column; gap: 3px; }
+  .waitfor-item {
+    display: flex; align-items: flex-start; gap: 5px; font-size: 11px; color: var(--muted);
+  }
+  .wf-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .dot-orange { background: var(--orange); }
+  .dot-green { background: var(--green); }
+
+  .price-col { }
+  .price-label { font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+  .price-val { font-size: 13px; font-weight: 700; }
+  .price-sub { font-size: 10px; color: var(--muted); }
+
+  .rr-box { text-align: center; }
+  .rr-val { font-size: 16px; font-weight: 800; }
+  .rr-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .stage-mini { font-size: 10px; color: var(--muted); margin-top: 4px; text-align: center; }
+
+  .action-col { display: flex; flex-direction: column; gap: 5px; }
+  .action-btn {
+    padding: 7px 10px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 700; text-align: center; transition: opacity 0.2s;
+  }
+  .btn-fire { background: var(--green); color: #000; }
+  .btn-wait { background: rgba(251,133,0,0.15); color: var(--orange); border: 1px solid var(--orange); }
+  .btn-watch { background: var(--surface2); color: var(--blue); border: 1px solid var(--blue); }
+  .action-btn:hover { opacity: 0.8; }
+  .leap-tag {
+    font-size: 10px; text-align: center; color: var(--purple);
+    background: rgba(188,140,255,0.1); border: 1px solid rgba(188,140,255,0.3);
+    border-radius: 4px; padding: 3px 6px;
+  }
+
+  /* SCORE BAR */
+  .score-bar-wrap { display: flex; flex-direction: column; gap: 3px; }
+  .score-bar {
+    height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; width: 80px;
+  }
+  .score-fill { height: 100%; border-radius: 3px; }
+
+  /* BOTTOM PANELS */
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px;
+  }
+  .panel h3 { font-size: 13px; font-weight: 700; margin-bottom: 14px; color: var(--accent); }
+
+  /* CONVICTION CRITERIA TABLE */
+  .criteria-table { width: 100%; border-collapse: collapse; }
+  .criteria-table th {
+    font-size: 10px; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left;
+  }
+  .criteria-table td { padding: 8px 8px; font-size: 12px; border-bottom: 1px solid rgba(48,54,61,0.4); vertical-align: top; }
+  .criteria-table tr:last-child td { border-bottom: none; }
+  .crit-met { color: var(--green); font-weight: 700; }
+  .crit-partial { color: var(--accent); font-weight: 700; }
+  .crit-missing { color: var(--red); font-weight: 700; }
+
+  /* CHECKLIST */
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .checklist li { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.5; }
+  .check-icon {
+    flex-shrink: 0; width: 16px; height: 16px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; margin-top: 1px;
+  }
+  .ck-pass { background: var(--green); color: #000; }
+  .ck-fail { background: var(--surface2); border: 1px solid var(--border); }
+  .ck-warn { background: var(--orange); color: #000; }
+
+  /* FIB TABLE */
+  .fib-table { width: 100%; border-collapse: collapse; }
+  .fib-table th { font-size: 10px; text-transform: uppercase; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .fib-table td { padding: 8px 4px; font-size: 12px; border-bottom: 1px solid rgba(48,54,61,0.4); }
+  .fib-table td:last-child { text-align: right; font-weight: 700; }
+  .fib-level { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; }
+  .fl-stop { background: rgba(248,81,73,0.15); color: var(--red); }
+  .fl-entry { background: rgba(63,185,80,0.15); color: var(--green); }
+  .fl-t1 { background: rgba(88,166,255,0.15); color: var(--blue); }
+  .fl-t2 { background: rgba(240,180,41,0.15); color: var(--accent); }
+  .fl-t3 { background: rgba(188,140,255,0.15); color: var(--purple); }
+
+  /* LEAP CALC */
+  .leap-calc { display: flex; flex-direction: column; gap: 9px; }
+  .calc-row { display: flex; justify-content: space-between; align-items: center; }
+  .calc-label { font-size: 11px; color: var(--muted); }
+  .calc-input {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 10px; color: var(--text); font-size: 13px; width: 100px; text-align: right;
+  }
+  .calc-divider { height: 1px; background: var(--border); }
+  .calc-result {
+    background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3);
+    border-radius: 8px; padding: 10px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .calc-result-label { font-size: 11px; color: var(--green); }
+  .calc-result-value { font-size: 16px; font-weight: 800; color: var(--green); }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(13,17,23,0.88);
+    z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+  }
+  .loading-overlay.active { display: flex; }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--accent); font-weight: 700; }
+  .loading-sub { color: var(--muted); font-size: 12px; }
+  .loading-bar-wrap { width: 260px; height: 4px; background: var(--border); border-radius: 2px; }
+  .loading-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 12px 18px; font-size: 13px;
+    transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 200;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  footer {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 14px 24px; text-align: center; font-size: 11px; color: var(--muted);
+  }
+
+  @media (max-width: 1100px) {
+    .card-inner { grid-template-columns: 62px 1fr 100px 100px; }
+    .waitfor-box, .rr-box, .score-bar-wrap, .action-col { display: none; }
+    .stats-row { grid-template-columns: repeat(3,1fr); }
+    .three-col { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 700px) {
+    .conviction-banner { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Running Stage Analysis Scanner...</div>
+  <div class="loading-sub" id="loading-sub">Fetching weekly data from Yahoo Finance</div>
+  <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar" style="width:0%"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="logo">
+    <div style="font-size:24px;">📈</div>
+    <div>
+      <h1>Profits Over Prophets</h1>
+      <span>Weinstein Stage 2 · Wyckoff Cup Breakout · Swing & LEAP Dashboard</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="last-updated">Last scan: Never</span>
+    <button id="scan-btn" onclick="runScan()">▶ Run Scan</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- CONVICTION BANNER -->
+  <div class="conviction-banner">
+    <div class="conv-panel conv-high">
+      <div class="conv-header">
+        <div class="conv-icon">🔥</div>
+        <div>
+          <div class="conv-title" style="color:var(--green)">HIGH CONVICTION — Act Now</div>
+          <div class="conv-sub">All criteria met · Stage 2 confirmed · Enter on next open or pullback to LPS</div>
+        </div>
+      </div>
+      <div class="conv-chips" id="fire-chips">
+        <span class="chip-empty">Run scan to populate...</span>
+      </div>
+    </div>
+    <div class="conv-panel conv-wait">
+      <div class="conv-header">
+        <div class="conv-icon">⏳</div>
+        <div>
+          <div class="conv-title" style="color:var(--orange)">WAIT FOR TRIGGER — Not Yet</div>
+          <div class="conv-sub">Strong setup building · Missing 1-2 criteria · Patience = edge</div>
+        </div>
+      </div>
+      <div class="conv-chips" id="wait-chips">
+        <span class="chip-empty">Run scan to populate...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">🔥 High Conviction</div>
+      <div class="stat-value" id="st-fire" style="color:var(--green)">—</div>
+      <div class="stat-sub">Act now setups</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">⏳ Wait For Trigger</div>
+      <div class="stat-value" id="st-wait" style="color:var(--orange)">—</div>
+      <div class="stat-sub">Almost ready</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">👁 On Watchlist</div>
+      <div class="stat-value" id="st-watch" style="color:var(--blue)">—</div>
+      <div class="stat-sub">Building bases</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📊 Avg R:R Ratio</div>
+      <div class="stat-value" id="st-rr" style="color:var(--purple)">—</div>
+      <div class="stat-sub">High conviction only</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📈 Avg Upside</div>
+      <div class="stat-value" id="st-up" style="color:var(--accent)">—</div>
+      <div class="stat-sub">To measured move target</div>
+    </div>
+  </div>
+
+  <!-- SECTOR TABS -->
+  <div class="sector-tabs">
+    <div class="sector-tab active" onclick="filterSector('ALL',this)">All Sectors</div>
+    <div class="sector-tab" onclick="filterSector('Energy',this)">⚡ Energy</div>
+    <div class="sector-tab" onclick="filterSector('Gold',this)">🥇 Gold Miners</div>
+    <div class="sector-tab" onclick="filterSector('Defense',this)">🛡 Defense</div>
+    <div class="sector-tab" onclick="filterSector('Industrials',this)">🏭 Industrials</div>
+    <div class="sector-tab" onclick="filterSector('Tech',this)">💻 Tech</div>
+    <div class="sector-tab" onclick="filterSector('Commodities',this)">🌾 Commodities</div>
+    <div class="sector-tab" onclick="filterSector('Healthcare',this)">🏥 Healthcare</div>
+  </div>
+
+  <!-- SECTION: HIGH CONVICTION -->
+  <div class="section-header">
+    <div class="section-title">🔥 HIGH CONVICTION — Enter Now</div>
+    <div class="section-badge badge-green" id="fire-badge">Run scan to load</div>
+  </div>
+  <div class="setups-grid" id="fire-grid">
+    <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:30px;text-align:center;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:10px;">🔥</div>
+      <div style="font-weight:700;margin-bottom:6px;">High Conviction setups load here</div>
+      <div style="font-size:12px;">Stage 2 confirmed · All Weinstein + Wyckoff criteria met · Volume confirmed · R:R ≥ 3:1</div>
+    </div>
+  </div>
+
+  <!-- SECTION: WAIT FOR TRIGGER -->
+  <div class="section-header">
+    <div class="section-title">⏳ WAIT FOR TRIGGER — Watch These Closely</div>
+    <div class="section-badge badge-orange" id="wait-badge">Run scan to load</div>
+  </div>
+  <div class="setups-grid" id="wait-grid">
+    <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:30px;text-align:center;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:10px;">⏳</div>
+      <div style="font-weight:700;margin-bottom:6px;">Wait-for-trigger setups load here</div>
+      <div style="font-size:12px;">Strong base · Missing 1-2 criteria · Each card shows exactly what you're waiting for before entering</div>
+    </div>
+  </div>
+
+  <!-- SECTION: WATCHLIST -->
+  <div class="section-header">
+    <div class="section-title">👁 WATCHLIST — Building Bases</div>
+    <div class="section-badge badge-yellow" id="watch-badge">Run scan to load</div>
+  </div>
+  <div class="setups-grid" id="watch-grid">
+    <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:30px;text-align:center;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:10px;">👁</div>
+      <div style="font-weight:700;margin-bottom:6px;">Watchlist stocks load here</div>
+      <div style="font-size:12px;">Stage 1 bases forming · Add TOS/TradingView alerts · Check weekly</div>
+    </div>
+  </div>
+
+  <!-- CONVICTION CRITERIA -->
+  <div class="section-header" style="margin-top:8px;">
+    <div class="section-title">📋 Conviction Scoring System</div>
+  </div>
+  <div class="panel" style="margin-bottom:22px;">
+    <table class="criteria-table">
+      <thead>
+        <tr>
+          <th>Criteria</th>
+          <th>High Conviction ✅</th>
+          <th>Wait For Trigger ⏳</th>
+          <th>Watchlist 👁</th>
+          <th>Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Weinstein Stage</strong></td>
+          <td class="crit-met">Stage 2 confirmed</td>
+          <td class="crit-partial">Stage 1→2 transition</td>
+          <td class="crit-missing">Stage 1 (basing)</td>
+          <td>30 pts</td>
+        </tr>
+        <tr>
+          <td><strong>30W SMA Direction</strong></td>
+          <td class="crit-met">Rising + price above</td>
+          <td class="crit-partial">Flattening / curling up</td>
+          <td class="crit-missing">Flat or declining</td>
+          <td>25 pts</td>
+        </tr>
+        <tr>
+          <td><strong>Volume on Breakout</strong></td>
+          <td class="crit-met">≥ 1.5× avg (institutional)</td>
+          <td class="crit-partial">1.1–1.5× (building)</td>
+          <td class="crit-missing">Below avg (no conviction)</td>
+          <td>20 pts</td>
+        </tr>
+        <tr>
+          <td><strong>52-Week Range Position</strong></td>
+          <td class="crit-met">> 75% (near highs)</td>
+          <td class="crit-partial">50–75% (mid-range)</td>
+          <td class="crit-missing">< 50% (lagging)</td>
+          <td>15 pts</td>
+        </tr>
+        <tr>
+          <td><strong>Base Duration</strong></td>
+          <td class="crit-met">≥ 26 weeks</td>
+          <td class="crit-partial">13–25 weeks</td>
+          <td class="crit-missing">< 13 weeks (too short)</td>
+          <td>10 pts</td>
+        </tr>
+        <tr>
+          <td><strong>Risk / Reward</strong></td>
+          <td class="crit-met">≥ 3:1</td>
+          <td class="crit-partial">2:1–3:1 (acceptable)</td>
+          <td class="crit-missing">< 2:1 (skip)</td>
+          <td>Qualifier</td>
+        </tr>
+        <tr>
+          <td><strong>Total Score Threshold</strong></td>
+          <td class="crit-met"><strong>≥ 75 points → ACT NOW</strong></td>
+          <td class="crit-partial"><strong>50–74 → WAIT</strong></td>
+          <td class="crit-missing"><strong>< 50 → WATCH</strong></td>
+          <td>100 pts</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BOTTOM: FIB + LEAP CALC -->
+  <div class="two-col">
+    <div class="panel">
+      <h3>📐 Fibonacci Levels — <span id="fib-label" style="color:var(--muted);font-weight:400;">Click a setup card</span></h3>
+      <table class="fib-table">
+        <thead><tr><th>Level</th><th>Price</th><th>Type</th><th>% from Entry</th><th>Action</th></tr></thead>
+        <tbody id="fib-tbody">
+          <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:18px;">Click any setup card to load levels</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>🔢 LEAP Options Calculator</h3>
+      <div class="leap-calc">
+        <div class="calc-row"><span class="calc-label">Entry Price ($)</span><input class="calc-input" id="lc-e" type="number" value="50.00" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">Target Price ($)</span><input class="calc-input" id="lc-t" type="number" value="70.00" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">Stop Loss ($)</span><input class="calc-input" id="lc-s" type="number" value="43.00" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">LEAP Premium ($)</span><input class="calc-input" id="lc-p" type="number" value="8.50" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">Contracts (#)</span><input class="calc-input" id="lc-c" type="number" value="5" oninput="calcLeap()"></div>
+        <div class="calc-divider"></div>
+        <div class="calc-row"><span class="calc-label">Total Capital at Risk</span><span id="lc-risk" style="font-weight:700;color:var(--red)">$4,250</span></div>
+        <div class="calc-row"><span class="calc-label">Stock Move to Target</span><span id="lc-move" style="font-weight:700;color:var(--green)">+40.0%</span></div>
+        <div class="calc-row"><span class="calc-label">Risk / Reward</span><span id="lc-rr" style="font-weight:700;color:var(--purple)">2.86:1</span></div>
+        <div class="calc-result">
+          <span class="calc-result-label">Est. LEAP Profit (0.75Δ)</span>
+          <span class="calc-result-value" id="lc-profit">+$5,750</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Deep ITM 70–80 delta · 12–18 month expiry · Max 2% account risk per trade</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <strong>Profits Over Prophets Dashboard</strong> · Stan Weinstein Stage Analysis + Wyckoff Methodology ·
+  Data: Yahoo Finance (free, no API key) · Educational purposes only · Not financial advice
+</footer>
+
+<script>
+const PROXY = 'https://corsproxy.io/?';
+const YF = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+
+const UNIVERSE = [
+  {t:'CVX',n:'Chevron',s:'Energy'},{t:'XOM',n:'Exxon Mobil',s:'Energy'},
+  {t:'BKR',n:'Baker Hughes',s:'Energy'},{t:'HAL',n:'Halliburton',s:'Energy'},
+  {t:'OXY',n:'Occidental',s:'Energy'},{t:'DVN',n:'Devon Energy',s:'Energy'},
+  {t:'FANG',n:'Diamondback Energy',s:'Energy'},{t:'MPC',n:'Marathon Petroleum',s:'Energy'},
+  {t:'GDX',n:'Gold Miners ETF',s:'Gold'},{t:'NEM',n:'Newmont',s:'Gold'},
+  {t:'GOLD',n:'Barrick Gold',s:'Gold'},{t:'AEM',n:'Agnico Eagle',s:'Gold'},
+  {t:'WPM',n:'Wheaton Precious',s:'Gold'},{t:'GDXJ',n:'Jr Gold Miners ETF',s:'Gold'},
+  {t:'LMT',n:'Lockheed Martin',s:'Defense'},{t:'NOC',n:'Northrop Grumman',s:'Defense'},
+  {t:'RTX',n:'RTX Corp',s:'Defense'},{t:'GD',n:'General Dynamics',s:'Defense'},
+  {t:'HII',n:'Huntington Ingalls',s:'Defense'},{t:'LDOS',n:'Leidos Holdings',s:'Defense'},
+  {t:'BAH',n:'Booz Allen Hamilton',s:'Defense'},
+  {t:'CAT',n:'Caterpillar',s:'Industrials'},{t:'DE',n:'Deere & Co',s:'Industrials'},
+  {t:'GE',n:'GE Aerospace',s:'Industrials'},{t:'ETN',n:'Eaton Corp',s:'Industrials'},
+  {t:'PWR',n:'Quanta Services',s:'Industrials'},{t:'URI',n:'United Rentals',s:'Industrials'},
+  {t:'PLTR',n:'Palantir',s:'Tech'},{t:'ANET',n:'Arista Networks',s:'Tech'},
+  {t:'ORCL',n:'Oracle',s:'Tech'},{t:'IBM',n:'IBM',s:'Tech'},
+  {t:'CRWD',n:'CrowdStrike',s:'Tech'},{t:'NOW',n:'ServiceNow',s:'Tech'},
+  {t:'DBC',n:'DB Commodity ETF',s:'Commodities'},{t:'FCX',n:'Freeport-McMoRan',s:'Commodities'},
+  {t:'NUE',n:'Nucor Corp',s:'Commodities'},{t:'CF',n:'CF Industries',s:'Commodities'},
+  {t:'MOS',n:'Mosaic Co',s:'Commodities'},
+  {t:'UNH',n:'UnitedHealth',s:'Healthcare'},{t:'LLY',n:'Eli Lilly',s:'Healthcare'},
+  {t:'ABBV',n:'AbbVie',s:'Healthcare'},{t:'MCK',n:'McKesson',s:'Healthcare'},
+  {t:'HUM',n:'Humana',s:'Healthcare'},
+];
+
+let allResults = [];
+let currentSector = 'ALL';
+
+async function fetchBars(ticker) {
+  const url = `${YF}${ticker}?interval=1wk&range=2y`;
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if (!r.ok) throw new Error(r.status);
+  const d = await r.json();
+  const res = d.chart.result[0];
+  const q = res.indicators.quote[0];
+  const bars = [];
+  for (let i = 0; i < res.timestamp.length; i++) {
+    if (q.close[i] && q.volume[i]) {
+      bars.push({ c: q.close[i], v: q.volume[i], h: q.high[i], l: q.low[i] });
+    }
+  }
+  return bars;
+}
+
+function sma(arr, n) {
+  if (arr.length < n) return null;
+  const s = arr.slice(-n);
+  return s.reduce((a,b)=>a+b,0)/n;
+}
+
+// CONVICTION CRITERIA — scored individually so we can show WHAT to wait for
+function analyzeSetup(ticker, name, sector, bars) {
+  if (bars.length < 30) return null;
+  const closes = bars.map(b=>b.c), vols = bars.map(b=>b.v),
+        highs = bars.map(b=>b.h), lows = bars.map(b=>b.l);
+  const price = closes[closes.length-1];
+  const sma30 = sma(closes,30), sma30prev = sma(closes.slice(0,-1),30);
+  const sma10 = sma(closes,10);
+  if (!sma30||!sma30prev) return null;
+
+  const smaRising = sma30 > sma30prev;
+  const aboveSma = price > sma30;
+  const high52 = Math.max(...highs.slice(-52)), low52 = Math.min(...lows.slice(-52));
+  const rangePos = (price-low52)/(high52-low52);
+  const avgVol = sma(vols,10);
+  const lastVol = vols[vols.length-1];
+  const volRatio = lastVol/avgVol;
+
+  // Base duration
+  let baseDur = 0;
+  const band = (high52-low52)*0.4;
+  for (let i=closes.length-1;i>=0;i--) {
+    if (Math.abs(closes[i]-price)<band) baseDur++;
+    else break;
+  }
+
+  // SCORE each criterion independently
+  const criteria = {
+    stage:     aboveSma && smaRising ? 30 : (aboveSma || smaRising ? 18 : 0),
+    smaDir:    smaRising ? 25 : (sma30>sma30prev*0.998 ? 12 : 0),
+    volume:    volRatio>=1.5 ? 20 : (volRatio>=1.1 ? 10 : 0),
+    rangePos:  rangePos>0.75 ? 15 : (rangePos>0.5 ? 8 : 0),
+    baseDur:   baseDur>=26 ? 10 : (baseDur>=13 ? 5 : 0),
+  };
+  const score = Object.values(criteria).reduce((a,b)=>a+b,0);
+
+  // Targets
+  const baseRange = high52 - low52;
+  const target1 = high52 + baseRange*0.618;
+  const target2 = high52 + baseRange*1.0;
+  const target3 = high52 + baseRange*1.618;
+  const stopLevel = price - (price - low52)*0.30;
+  const risk = price - stopLevel;
+  const reward = target1 - price;
+  const rrRatio = risk>0 ? reward/risk : 0;
+  const upside = ((target1-price)/price)*100;
+
+  // Wyckoff
+  let wyckoff, wyCls;
+  if (rangePos>0.90&&volRatio>1.5){wyckoff='Phase E';wyCls='phase-e';}
+  else if (rangePos>0.75&&smaRising){wyckoff='LPS';wyCls='phase-lps';}
+  else if (rangePos>0.60&&volRatio>1.2){wyckoff='SOS';wyCls='phase-sos';}
+  else if (rangePos<0.35){wyckoff='Spring';wyCls='phase-spring';}
+  else {wyckoff='Phase B';wyCls='phase-b';}
+
+  // CONVICTION CLASSIFICATION
+  let conviction, stripeClass, badgeClass, badgeLabel;
+  if (score>=75 && rrRatio>=2.5) {
+    conviction='fire'; stripeClass='stripe-fire';
+    badgeClass='badge-fire'; badgeLabel='🔥 ACT NOW';
+  } else if (score>=50 && score<75) {
+    conviction='wait'; stripeClass='stripe-wait';
+    badgeClass='badge-waitfor'; badgeLabel='⏳ WAIT';
+  } else if (score>=30) {
+    conviction='watch'; stripeClass='stripe-watch';
+    badgeClass='badge-watch'; badgeLabel='👁 WATCH';
+  } else {
+    conviction='avoid'; stripeClass='stripe-avoid';
+    badgeClass='badge-avoid'; badgeLabel='🚫 AVOID';
+  }
+
+  // What to wait for — specific missing criteria
+  const waitFor = [];
+  const fireReason = [];
+  if (!aboveSma) waitFor.push('Price must close above 30W SMA ($'+sma30.toFixed(2)+')');
+  else fireReason.push('Price above 30W SMA ✓');
+  if (!smaRising) waitFor.push('30W SMA must begin rising (currently flat)');
+  else fireReason.push('30W SMA rising ✓');
+  if (volRatio<1.5) waitFor.push('Need breakout volume ≥1.5× avg (current: '+volRatio.toFixed(2)+'×)');
+  else fireReason.push('Volume confirmed '+volRatio.toFixed(2)+'× ✓');
+  if (rangePos<0.75) waitFor.push('Price needs to push above '+(rangePos*100).toFixed(0)+'% range pos → need >75%');
+  else fireReason.push('Range position strong '+((rangePos)*100).toFixed(0)+'% ✓');
+  if (baseDur<26) waitFor.push('Base only '+baseDur+' weeks — ideally wait for ≥26 wks');
+  else fireReason.push('Base '+baseDur+' weeks — sufficient ✓');
+  if (rrRatio<2.5) waitFor.push('R:R is '+rrRatio.toFixed(1)+':1 — wait for better entry near LPS');
+
+  return {
+    ticker,name,sector,price,sma30,sma10,score,criteria,
+    conviction,stripeClass,badgeClass,badgeLabel,
+    wyckoff,wyCls,
+    high52,low52,baseRange,baseDur,volRatio,rangePos,
+    target1,target2,target3,stopLevel,
+    rrRatio,upside,waitFor,fireReason,
+  };
+}
+
+function convCard(r) {
+  const isFire = r.conviction==='fire';
+  const upsideStr = '+'+r.upside.toFixed(1)+'%';
+  const rrColor = r.rrRatio>=3?'var(--green)':r.rrRatio>=2?'var(--accent)':'var(--red)';
+
+  // wait-for / fire-reason box
+  const items = isFire ? r.fireReason : r.waitFor;
+  const boxClass = isFire ? 'fire-box' : '';
+  const dotClass = isFire ? 'dot-green' : 'dot-orange';
+  const titleClass = isFire ? 'wf-green' : 'wf-orange';
+  const titleText = isFire ? 'WHY THIS IS HIGH CONVICTION' : 'WHAT YOU'RE WAITING FOR';
+
+  const waitBox = `
+    <div class="waitfor-box ${boxClass}">
+      <div class="waitfor-title ${titleClass}">${titleText}</div>
+      <div class="waitfor-items">
+        ${items.slice(0,3).map(it=>`
+          <div class="waitfor-item">
+            <div class="wf-dot ${dotClass}"></div>
+            <span>${it}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  const wyckoffColors = {
+    'Phase E':'var(--red)','LPS':'var(--blue)','SOS':'var(--accent)',
+    'Spring':'var(--green)','Phase B':'var(--purple)'
+  };
+
+  return `
+  <div class="setup-card" onclick="loadFib(${JSON.stringify(r).replace(/"/g,'&quot;').replace(/'/g,'&#39;')})">
+    <div class="conv-stripe ${r.stripeClass}"></div>
+    <div class="card-inner">
+      <div>
+        <div class="conv-badge ${r.badgeClass}">${r.badgeLabel}</div>
+        <div style="margin-top:6px;text-align:center;">
+          <div class="ticker-sym">${r.ticker}</div>
+          <div class="ticker-name">${r.sector}</div>
+        </div>
+      </div>
+      <div class="setup-info">
+        <h3>${r.name}</h3>
+        <span class="pattern-tag">Cup Breakout</span>
+        <span class="pattern-tag" style="color:${wyckoffColors[r.wyckoff]||'var(--muted)'};border-color:${wyckoffColors[r.wyckoff]||'var(--border)'};">${r.wyckoff}</span>
+        <div class="sector-mini">Base: ~${r.baseDur}wks · Vol: ${r.volRatio.toFixed(2)}× · Score: ${r.score}/100</div>
+      </div>
+      ${waitBox}
+      <div class="price-col">
+        <div class="price-label">Price / 30W SMA</div>
+        <div class="price-val">$${r.price.toFixed(2)}</div>
+        <div class="price-sub">SMA: $${r.sma30.toFixed(2)}</div>
+      </div>
+      <div class="price-col">
+        <div class="price-label">Entry · Stop</div>
+        <div class="price-val" style="color:var(--green)">$${r.price.toFixed(2)}</div>
+        <div class="price-sub" style="color:var(--red)">↓ $${r.stopLevel.toFixed(2)}</div>
+      </div>
+      <div class="rr-box">
+        <div class="price-label" style="text-align:center;">R:R · Upside</div>
+        <div class="rr-val" style="color:${rrColor}">${r.rrRatio.toFixed(1)}:1</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700;">${upsideStr}</div>
+        <div class="score-bar-wrap" style="margin-top:5px;align-items:center;">
+          <div class="score-bar"><div class="score-fill" style="width:${r.score}%;background:${r.conviction==='fire'?'var(--green)':r.conviction==='wait'?'var(--orange)':'var(--blue)'}"></div></div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px;">${r.score}/100</div>
+        </div>
+      </div>
+      <div class="action-col">
+        <button class="action-btn ${r.conviction==='fire'?'btn-fire':r.conviction==='wait'?'btn-wait':'btn-watch'}">
+          ${r.conviction==='fire'?'✅ ENTER TRADE':r.conviction==='wait'?'⏳ SET ALERT':'👁 WATCHLIST'}
+        </button>
+        <div class="leap-tag">Jan 2027 $${Math.floor(r.price/5)*5}C</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAll(results) {
+  const filter = r => currentSector==='ALL' || r.sector===currentSector;
+  const fire  = results.filter(r=>r.conviction==='fire'&&filter(r)).sort((a,b)=>b.score-a.score);
+  const wait  = results.filter(r=>r.conviction==='wait'&&filter(r)).sort((a,b)=>b.score-a.score);
+  const watch = results.filter(r=>r.conviction==='watch'&&filter(r)).sort((a,b)=>b.score-a.score).slice(0,8);
+
+  // Conviction banner chips
+  const fireChips = document.getElementById('fire-chips');
+  const waitChips = document.getElementById('wait-chips');
+  fireChips.innerHTML = fire.length
+    ? fire.map(r=>`<span class="conv-chip chip-green">🔥 ${r.ticker}</span>`).join('')
+    : '<span class="chip-empty">No high conviction setups in this filter</span>';
+  waitChips.innerHTML = wait.length
+    ? wait.slice(0,8).map(r=>`<span class="conv-chip chip-orange">⏳ ${r.ticker}</span>`).join('')
+    : '<span class="chip-empty">No wait-for setups in this filter</span>';
+
+  // Stats
+  document.getElementById('st-fire').textContent = fire.length;
+  document.getElementById('st-wait').textContent = wait.length;
+  document.getElementById('st-watch').textContent = watch.length;
+  const fireRR = fire.length ? (fire.reduce((a,r)=>a+r.rrRatio,0)/fire.length).toFixed(1)+':1' : '—';
+  const fireUp = fire.length ? '+'+((fire.reduce((a,r)=>a+r.upside,0)/fire.length).toFixed(1))+'%' : '—';
+  document.getElementById('st-rr').textContent = fireRR;
+  document.getElementById('st-up').textContent = fireUp;
+
+  // Badges
+  document.getElementById('fire-badge').textContent = fire.length+' setups · Enter now';
+  document.getElementById('wait-badge').textContent = wait.length+' setups · Criteria pending';
+  document.getElementById('watch-badge').textContent = watch.length+' stocks · Building bases';
+
+  // Grids
+  const empty = (icon,title,sub) => `<div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:28px;text-align:center;color:var(--muted);">
+    <div style="font-size:28px;margin-bottom:8px;">${icon}</div>
+    <div style="font-weight:700;margin-bottom:4px;">${title}</div>
+    <div style="font-size:12px;">${sub}</div></div>`;
+
+  document.getElementById('fire-grid').innerHTML  = fire.length  ? fire.map(convCard).join('')  : empty('🔥','No high conviction setups right now','All criteria not yet met — patience is your edge');
+  document.getElementById('wait-grid').innerHTML  = wait.length  ? wait.map(convCard).join('') : empty('⏳','No wait-for setups in this sector','Try "All Sectors" tab');
+  document.getElementById('watch-grid').innerHTML = watch.length ? watch.map(convCard).join('') : empty('👁','No watchlist stocks','Try "All Sectors" tab');
+}
+
+function loadFib(r) {
+  document.getElementById('fib-label').textContent = r.ticker+' — '+r.name;
+  const entry = r.price, stop = r.stopLevel, bkout = r.high52, base = r.baseRange;
+  const rows = [
+    {lbl:'Stop Loss',     price:stop,                   cls:'fl-stop', desc:'Hard stop — below LPS low',         pct:((stop-entry)/entry*100).toFixed(1)+'%', act:'EXIT'},
+    {lbl:'Entry',         price:entry,                  cls:'fl-entry',desc:'Current LPS / breakout entry',      pct:'0%',                                    act:'BUY'},
+    {lbl:'0.618 Target',  price:bkout+base*0.618,       cls:'fl-t1',   desc:'First partial — sell 30%',          pct:'+'+((bkout+base*0.618-entry)/entry*100).toFixed(1)+'%', act:'SELL 30%'},
+    {lbl:'1.0 Target',    price:r.target1,              cls:'fl-t2',   desc:'Measured move — sell 40%',          pct:'+'+((r.target1-entry)/entry*100).toFixed(1)+'%',        act:'SELL 40%'},
+    {lbl:'1.618 Ext.',    price:r.target3,              cls:'fl-t3',   desc:'Full extension — trail stop',       pct:'+'+((r.target3-entry)/entry*100).toFixed(1)+'%',        act:'TRAIL'},
+    {lbl:'LEAP Strike',   price:Math.floor(entry/5)*5,  cls:'fl-entry',desc:'Nearest ITM strike (70-80Δ)',       pct:'ITM',                                   act:'JAN 2027'},
+  ];
+  document.getElementById('fib-tbody').innerHTML = rows.map(row=>`
+    <tr>
+      <td><span class="fib-level ${row.cls}">${row.lbl}</span></td>
+      <td style="font-weight:700;">$${parseFloat(row.price).toFixed(2)}</td>
+      <td style="color:var(--muted);font-size:11px;">${row.desc}</td>
+      <td style="font-weight:700;">${row.pct}</td>
+      <td>${row.act}</td>
+    </tr>`).join('');
+  document.getElementById('lc-e').value = entry.toFixed(2);
+  document.getElementById('lc-t').value = r.target1.toFixed(2);
+  document.getElementById('lc-s').value = stop.toFixed(2);
+  calcLeap();
+  showToast('✅ '+r.ticker+' loaded — check Fibonacci levels & LEAP calc below');
+}
+
+function calcLeap() {
+  const e=+document.getElementById('lc-e').value||0, t=+document.getElementById('lc-t').value||0,
+        s=+document.getElementById('lc-s').value||0, p=+document.getElementById('lc-p').value||0,
+        c=+document.getElementById('lc-c').value||1;
+  document.getElementById('lc-risk').textContent   = '$'+(p*c*100).toLocaleString();
+  document.getElementById('lc-move').textContent   = e>0?'+'+(((t-e)/e)*100).toFixed(1)+'%':'—';
+  const rr = e>s ? ((t-e)/(e-s)).toFixed(2) : '—';
+  document.getElementById('lc-rr').textContent     = rr+':1';
+  document.getElementById('lc-profit').textContent = '+$'+Math.round((t-e)*0.75*c*100).toLocaleString();
+}
+
+function filterSector(sec, el) {
+  currentSector = sec;
+  document.querySelectorAll('.sector-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if (allResults.length) renderAll(allResults);
+}
+
+async function runScan() {
+  const btn = document.getElementById('scan-btn');
+  btn.disabled=true; btn.textContent='⏳ Scanning...';
+  document.getElementById('loading').classList.add('active');
+  allResults=[];
+  for (let i=0;i<UNIVERSE.length;i++) {
+    const st=UNIVERSE[i];
+    document.getElementById('loading-sub').textContent=`Analyzing ${st.t} (${i+1}/${UNIVERSE.length}) — ${st.s}`;
+    document.getElementById('loading-bar').style.width=Math.round((i+1)/UNIVERSE.length*100)+'%';
+    try {
+      const bars = await fetchBars(st.t);
+      const res = analyzeSetup(st.t,st.n,st.s,bars);
+      if(res) allResults.push(res);
+    } catch(e){ console.warn(st.t,e.message); }
+    await new Promise(r=>setTimeout(r,120));
+  }
+  document.getElementById('loading').classList.remove('active');
+  btn.disabled=false; btn.textContent='🔄 Re-Scan';
+  document.getElementById('last-updated').textContent='Last scan: '+new Date().toLocaleTimeString();
+  renderAll(allResults);
+  const fireCount = allResults.filter(r=>r.conviction==='fire').length;
+  showToast(`✅ Scan done · 🔥 ${fireCount} high conviction setups found`);
+  calcLeap();
+}
+
+function showToast(m){
+  const t=document.getElementById('toast'); t.textContent=m;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3500);
+}
+calcLeap();
+</script>
+</body>
+</html>
