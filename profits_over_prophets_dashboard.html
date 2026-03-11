@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profits Over Prophets | Stage Analysis Dashboard</title>
+<style>
+  :root {
+    --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;
+    --accent:#f0b429;--green:#3fb950;--red:#f85149;--blue:#58a6ff;
+    --purple:#bc8cff;--orange:#fb8500;--text:#e6edf3;--muted:#8b949e;
+    --font:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;
+    display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .logo{display:flex;align-items:center;gap:10px;}
+  .logo h1{font-size:18px;font-weight:700;color:var(--accent);}
+  .logo span{font-size:11px;color:var(--muted);display:block;margin-top:2px;}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  #last-updated{font-size:11px;color:var(--muted);}
+  #scan-btn{background:var(--accent);color:#000;border:none;padding:8px 18px;
+    border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;}
+  #scan-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .container{max-width:1440px;margin:0 auto;padding:20px 24px;}
+
+  /* DEBUG PANEL */
+  #debug-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:14px 18px;margin-bottom:18px;display:none;}
+  #debug-panel h4{font-size:12px;color:var(--accent);margin-bottom:8px;}
+  #debug-log{font-size:11px;color:var(--muted);font-family:monospace;
+    max-height:120px;overflow-y:auto;line-height:1.7;}
+  .log-ok{color:var(--green);}
+  .log-err{color:var(--red);}
+  .log-warn{color:var(--orange);}
+  .log-info{color:var(--blue);}
+
+  /* CONVICTION BANNER */
+  .conviction-banner{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+  .conv-panel{border-radius:12px;padding:16px 20px;border:2px solid;}
+  .conv-high{border-color:var(--green);background:rgba(63,185,80,0.06);}
+  .conv-wait{border-color:var(--orange);background:rgba(251,133,0,0.06);}
+  .conv-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .conv-title{font-size:14px;font-weight:800;}
+  .conv-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .conv-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .conv-chip{padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid;}
+  .chip-green{background:rgba(63,185,80,0.15);border-color:var(--green);color:var(--green);}
+  .chip-orange{background:rgba(251,133,0,0.15);border-color:var(--orange);color:var(--orange);}
+  .chip-empty{color:var(--muted);font-size:12px;font-style:italic;padding:4px 0;}
+
+  /* STATS */
+  .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+  .stat-value{font-size:22px;font-weight:700;margin-top:4px;}
+  .stat-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+  /* SECTOR TABS */
+  .sector-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+  .sector-tab{padding:6px 14px;border-radius:6px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);cursor:pointer;font-size:12px;transition:all 0.15s;}
+  .sector-tab.active,.sector-tab:hover{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .section-title{font-size:15px;font-weight:700;}
+  .section-badge{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid;}
+  .badge-green{background:rgba(63,185,80,0.1);border-color:var(--green);color:var(--green);}
+  .badge-orange{background:rgba(251,133,0,0.1);border-color:var(--orange);color:var(--orange);}
+  .badge-yellow{background:rgba(240,180,41,0.1);border-color:var(--accent);color:var(--accent);}
+
+  .setups-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+
+  /* SETUP CARD */
+  .setup-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;
+    display:flex;overflow:hidden;transition:border-color 0.2s;cursor:pointer;}
+  .setup-card:hover{border-color:var(--accent);}
+  .conv-stripe{width:6px;flex-shrink:0;}
+  .stripe-fire{background:var(--green);}
+  .stripe-wait{background:var(--orange);}
+  .stripe-watch{background:var(--blue);}
+  .stripe-avoid{background:var(--red);}
+  .card-inner{flex:1;padding:14px 18px;display:grid;
+    grid-template-columns:62px 1fr 200px 110px 110px 120px 110px;
+    align-items:center;gap:12px;}
+
+  .conv-badge{padding:5px 9px;border-radius:8px;font-size:11px;font-weight:800;
+    text-align:center;line-height:1.2;border:1px solid;margin-bottom:5px;}
+  .badge-fire{background:rgba(63,185,80,0.15);border-color:var(--green);color:var(--green);}
+  .badge-waitfor{background:rgba(251,133,0,0.15);border-color:var(--orange);color:var(--orange);}
+  .badge-watch2{background:rgba(88,166,255,0.15);border-color:var(--blue);color:var(--blue);}
+  .badge-avoid2{background:rgba(248,81,73,0.15);border-color:var(--red);color:var(--red);}
+  .ticker-sym{font-size:15px;font-weight:800;color:var(--accent);text-align:center;}
+  .ticker-name{font-size:10px;color:var(--muted);margin-top:2px;text-align:center;}
+
+  .setup-info h3{font-size:13px;font-weight:700;margin-bottom:3px;}
+  .pattern-tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;
+    background:rgba(188,140,255,0.1);color:var(--purple);
+    border:1px solid rgba(188,140,255,0.3);margin-right:4px;}
+  .sector-mini{font-size:10px;color:var(--muted);margin-top:4px;}
+
+  /* WAIT-FOR BOX */
+  .waitfor-box{background:rgba(251,133,0,0.07);border:1px solid rgba(251,133,0,0.3);
+    border-radius:8px;padding:8px 12px;}
+  .waitfor-box.fire-box{background:rgba(63,185,80,0.07);border-color:rgba(63,185,80,0.3);}
+  .waitfor-title{font-size:10px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.5px;margin-bottom:4px;}
+  .wf-orange{color:var(--orange);}
+  .wf-green{color:var(--green);}
+  .waitfor-items{display:flex;flex-direction:column;gap:3px;}
+  .waitfor-item{display:flex;align-items:flex-start;gap:5px;font-size:11px;color:var(--muted);}
+  .wf-dot{width:5px;height:5px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+  .dot-orange{background:var(--orange);}
+  .dot-green{background:var(--green);}
+
+  .price-col .price-label{font-size:10px;color:var(--muted);margin-bottom:2px;}
+  .price-col .price-val{font-size:13px;font-weight:700;}
+  .price-col .price-sub{font-size:10px;color:var(--muted);}
+
+  .rr-box{text-align:center;}
+  .rr-val{font-size:16px;font-weight:800;}
+  .score-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;width:80px;margin:0 auto;}
+  .score-fill{height:100%;border-radius:3px;}
+
+  .action-col{display:flex;flex-direction:column;gap:5px;}
+  .action-btn{padding:7px 10px;border-radius:6px;border:none;cursor:pointer;
+    font-size:11px;font-weight:700;text-align:center;transition:opacity 0.2s;}
+  .btn-fire{background:var(--green);color:#000;}
+  .btn-wait{background:rgba(251,133,0,0.15);color:var(--orange);border:1px solid var(--orange);}
+  .btn-watch2{background:var(--surface2);color:var(--blue);border:1px solid var(--blue);}
+  .action-btn:hover{opacity:0.8;}
+  .leap-tag{font-size:10px;text-align:center;color:var(--purple);
+    background:rgba(188,140,255,0.1);border:1px solid rgba(188,140,255,0.3);
+    border-radius:4px;padding:3px 6px;}
+
+  /* CRITERIA TABLE */
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+  .panel h3{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--accent);}
+  .criteria-table{width:100%;border-collapse:collapse;}
+  .criteria-table th{font-size:10px;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--border);padding:6px 8px;text-align:left;}
+  .criteria-table td{padding:8px 8px;font-size:12px;border-bottom:1px solid rgba(48,54,61,0.4);vertical-align:top;}
+  .criteria-table tr:last-child td{border-bottom:none;}
+  .crit-met{color:var(--green);font-weight:700;}
+  .crit-partial{color:var(--accent);font-weight:700;}
+  .crit-missing{color:var(--red);font-weight:700;}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
+  .fib-table{width:100%;border-collapse:collapse;}
+  .fib-table th{font-size:10px;text-transform:uppercase;color:var(--muted);
+    padding:6px 0;border-bottom:1px solid var(--border);}
+  .fib-table td{padding:8px 4px;font-size:12px;border-bottom:1px solid rgba(48,54,61,0.4);}
+  .fib-table td:last-child{text-align:right;font-weight:700;}
+  .fib-level{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;}
+  .fl-stop{background:rgba(248,81,73,0.15);color:var(--red);}
+  .fl-entry{background:rgba(63,185,80,0.15);color:var(--green);}
+  .fl-t1{background:rgba(88,166,255,0.15);color:var(--blue);}
+  .fl-t2{background:rgba(240,180,41,0.15);color:var(--accent);}
+  .fl-t3{background:rgba(188,140,255,0.15);color:var(--purple);}
+
+  .leap-calc{display:flex;flex-direction:column;gap:9px;}
+  .calc-row{display:flex;justify-content:space-between;align-items:center;}
+  .calc-label{font-size:11px;color:var(--muted);}
+  .calc-input{background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+    padding:5px 10px;color:var(--text);font-size:13px;width:100px;text-align:right;}
+  .calc-divider{height:1px;background:var(--border);}
+  .calc-result{background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.3);
+    border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}
+  .calc-result-label{font-size:11px;color:var(--green);}
+  .calc-result-value{font-size:16px;font-weight:800;color:var(--green);}
+
+  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(13,17,23,0.88);
+    z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+  .loading-overlay.active{display:flex;}
+  .spinner{width:40px;height:40px;border:3px solid var(--border);
+    border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{color:var(--accent);font-weight:700;}
+  .loading-sub{color:var(--muted);font-size:12px;max-width:320px;text-align:center;}
+  .loading-bar-wrap{width:280px;height:6px;background:var(--border);border-radius:3px;}
+  .loading-bar{height:100%;background:var(--accent);border-radius:3px;transition:width 0.3s;}
+  .loading-count{color:var(--muted);font-size:11px;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);
+    border:1px solid var(--accent);border-radius:8px;padding:12px 18px;font-size:13px;
+    transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:200;}
+  .toast.show{transform:translateY(0);opacity:1;}
+
+  footer{background:var(--surface);border-top:1px solid var(--border);
+    padding:14px 24px;text-align:center;font-size:11px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-title">Running Stage Analysis Scanner...</div>
+  <div class="loading-sub" id="loading-sub">Connecting to data source...</div>
+  <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar" style="width:0%"></div></div>
+  <div class="loading-count" id="loading-count"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="logo">
+    <div style="font-size:24px;">📈</div>
+    <div>
+      <h1>Profits Over Prophets</h1>
+      <span>Weinstein Stage 2 · Wyckoff Cup Breakout · Swing & LEAP Dashboard</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="last-updated">Last scan: Never</span>
+    <button id="scan-btn" onclick="runScan()">▶ Run Scan</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- DEBUG PANEL -->
+  <div id="debug-panel">
+    <h4>🔧 Scan Diagnostics (check this if scan fails)</h4>
+    <div id="debug-log"></div>
+  </div>
+
+  <!-- CONVICTION BANNER -->
+  <div class="conviction-banner">
+    <div class="conv-panel conv-high">
+      <div class="conv-header">
+        <div style="font-size:22px;">🔥</div>
+        <div>
+          <div class="conv-title" style="color:var(--green)">HIGH CONVICTION — Act Now</div>
+          <div class="conv-sub">All criteria met · Stage 2 confirmed · Enter on open or LPS pullback</div>
+        </div>
+      </div>
+      <div class="conv-chips" id="fire-chips"><span class="chip-empty">Run scan to populate...</span></div>
+    </div>
+    <div class="conv-panel conv-wait">
+      <div class="conv-header">
+        <div style="font-size:22px;">⏳</div>
+        <div>
+          <div class="conv-title" style="color:var(--orange)">WAIT FOR TRIGGER — Not Yet</div>
+          <div class="conv-sub">Strong setup building · Each card shows exactly what you need to see first</div>
+        </div>
+      </div>
+      <div class="conv-chips" id="wait-chips"><span class="chip-empty">Run scan to populate...</span></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">🔥 High Conviction</div><div class="stat-value" id="st-fire" style="color:var(--green)">—</div><div class="stat-sub">Act now setups</div></div>
+    <div class="stat-card"><div class="stat-label">⏳ Wait For Trigger</div><div class="stat-value" id="st-wait" style="color:var(--orange)">—</div><div class="stat-sub">Almost ready</div></div>
+    <div class="stat-card"><div class="stat-label">👁 On Watchlist</div><div class="stat-value" id="st-watch" style="color:var(--blue)">—</div><div class="stat-sub">Building bases</div></div>
+    <div class="stat-card"><div class="stat-label">📊 Avg R:R Ratio</div><div class="stat-value" id="st-rr" style="color:var(--purple)">—</div><div class="stat-sub">High conviction only</div></div>
+    <div class="stat-card"><div class="stat-label">📈 Avg Upside</div><div class="stat-value" id="st-up" style="color:var(--accent)">—</div><div class="stat-sub">To measured move target</div></div>
+  </div>
+
+  <!-- SECTOR TABS -->
+  <div class="sector-tabs">
+    <div class="sector-tab active" onclick="filterSector('ALL',this)">All Sectors</div>
+    <div class="sector-tab" onclick="filterSector('Energy',this)">⚡ Energy</div>
+    <div class="sector-tab" onclick="filterSector('Gold',this)">🥇 Gold Miners</div>
+    <div class="sector-tab" onclick="filterSector('Defense',this)">🛡 Defense</div>
+    <div class="sector-tab" onclick="filterSector('Industrials',this)">🏭 Industrials</div>
+    <div class="sector-tab" onclick="filterSector('Tech',this)">💻 Tech</div>
+    <div class="sector-tab" onclick="filterSector('Commodities',this)">🌾 Commodities</div>
+    <div class="sector-tab" onclick="filterSector('Healthcare',this)">🏥 Healthcare</div>
+  </div>
+
+  <div class="section-header"><div class="section-title">🔥 HIGH CONVICTION — Enter Now</div><div class="section-badge badge-green" id="fire-badge">Run scan</div></div>
+  <div class="setups-grid" id="fire-grid"><div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:30px;text-align:center;color:var(--muted);"><div style="font-size:28px;margin-bottom:8px;">🔥</div><div style="font-weight:700;">High conviction setups appear here after scanning</div></div></div>
+
+  <div class="section-header"><div class="section-title">⏳ WAIT FOR TRIGGER — Watch Closely</div><div class="section-badge badge-orange" id="wait-badge">Run scan</div></div>
+  <div class="setups-grid" id="wait-grid"><div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:30px;text-align:center;color:var(--muted);"><div style="font-size:28px;margin-bottom:8px;">⏳</div><div style="font-weight:700;">Wait-for-trigger setups appear here — each shows what trigger you need</div></div></div>
+
+  <div class="section-header"><div class="section-title">👁 WATCHLIST — Building Bases</div><div class="section-badge badge-yellow" id="watch-badge">Run scan</div></div>
+  <div class="setups-grid" id="watch-grid"><div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:30px;text-align:center;color:var(--muted);"><div style="font-size:28px;margin-bottom:8px;">👁</div><div style="font-weight:700;">Stage 1 basing stocks appear here</div></div></div>
+
+  <!-- CONVICTION CRITERIA -->
+  <div class="section-header" style="margin-top:8px;"><div class="section-title">📋 Conviction Scoring Criteria</div></div>
+  <div class="panel" style="margin-bottom:22px;">
+    <table class="criteria-table">
+      <thead><tr><th>Criteria</th><th>🔥 High Conviction (Act Now)</th><th>⏳ Wait For Trigger</th><th>👁 Watchlist</th><th>Weight</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Weinstein Stage</strong></td><td class="crit-met">Stage 2 confirmed</td><td class="crit-partial">Stage 1→2 transition</td><td class="crit-missing">Stage 1 basing</td><td>30 pts</td></tr>
+        <tr><td><strong>30W SMA Direction</strong></td><td class="crit-met">Rising + price above</td><td class="crit-partial">Flattening/curling up</td><td class="crit-missing">Flat or declining</td><td>25 pts</td></tr>
+        <tr><td><strong>Volume on Breakout</strong></td><td class="crit-met">≥ 1.5× avg volume</td><td class="crit-partial">1.1–1.5× (building)</td><td class="crit-missing">Below avg</td><td>20 pts</td></tr>
+        <tr><td><strong>52W Range Position</strong></td><td class="crit-met">> 75% (near highs)</td><td class="crit-partial">50–75% (mid-range)</td><td class="crit-missing">< 50%</td><td>15 pts</td></tr>
+        <tr><td><strong>Base Duration</strong></td><td class="crit-met">≥ 26 weeks</td><td class="crit-partial">13–25 weeks</td><td class="crit-missing">< 13 weeks</td><td>10 pts</td></tr>
+        <tr><td><strong>Score Threshold</strong></td><td class="crit-met"><strong>≥ 75 pts → ACT NOW</strong></td><td class="crit-partial"><strong>50–74 pts → WAIT</strong></td><td class="crit-missing"><strong>< 50 pts → WATCH</strong></td><td>100 pts</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <h3>📐 Fibonacci Levels — <span id="fib-label" style="color:var(--muted);font-weight:400;">Click any setup card</span></h3>
+      <table class="fib-table">
+        <thead><tr><th>Level</th><th>Price</th><th>Type</th><th>% from Entry</th><th>Action</th></tr></thead>
+        <tbody id="fib-tbody"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:18px;">Click a setup card to load levels</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>🔢 LEAP Options Calculator</h3>
+      <div class="leap-calc">
+        <div class="calc-row"><span class="calc-label">Entry Price ($)</span><input class="calc-input" id="lc-e" type="number" value="50.00" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">Target Price ($)</span><input class="calc-input" id="lc-t" type="number" value="70.00" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">Stop Loss ($)</span><input class="calc-input" id="lc-s" type="number" value="43.00" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">LEAP Premium ($)</span><input class="calc-input" id="lc-p" type="number" value="8.50" oninput="calcLeap()"></div>
+        <div class="calc-row"><span class="calc-label">Contracts (#)</span><input class="calc-input" id="lc-c" type="number" value="5" oninput="calcLeap()"></div>
+        <div class="calc-divider"></div>
+        <div class="calc-row"><span class="calc-label">Total Capital at Risk</span><span id="lc-risk" style="font-weight:700;color:var(--red)">$4,250</span></div>
+        <div class="calc-row"><span class="calc-label">Stock Move to Target</span><span id="lc-move" style="font-weight:700;color:var(--green)">+40.0%</span></div>
+        <div class="calc-row"><span class="calc-label">Risk / Reward</span><span id="lc-rr" style="font-weight:700;color:var(--purple)">2.86:1</span></div>
+        <div class="calc-result"><span class="calc-result-label">Est. LEAP Profit (0.75Δ)</span><span class="calc-result-value" id="lc-profit">+$5,750</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Deep ITM 70–80 delta · 12–18 month expiry · Max 2% account risk</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer><strong>Profits Over Prophets Dashboard</strong> · Stan Weinstein + Wyckoff · Data: Yahoo Finance · Educational purposes only · Not financial advice</footer>
+
+<script>
+// ============================================================
+// PROXY CHAIN — tries each proxy in order until one works
+// ============================================================
+const PROXIES = [
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+const YF = ticker => `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1wk&range=2y`;
+
+let workingProxyIdx = -1; // cache which proxy works
+
+function log(msg, type='info') {
+  const panel = document.getElementById('debug-panel');
+  const logEl = document.getElementById('debug-log');
+  panel.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = 'log-'+type;
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function fetchWithProxy(ticker) {
+  const url = YF(ticker);
+
+  // If we already found a working proxy, use it first
+  if (workingProxyIdx >= 0) {
+    try {
+      const r = await fetch(PROXIES[workingProxyIdx](url), {signal: AbortSignal.timeout(8000)});
+      if (r.ok) {
+        const d = await r.json();
+        if (d.chart && d.chart.result) return d;
+      }
+    } catch(e) { workingProxyIdx = -1; } // reset if it stopped working
+  }
+
+  // Try all proxies
+  for (let i = 0; i < PROXIES.length; i++) {
+    try {
+      const proxyUrl = PROXIES[i](url);
+      if (i === 0 && ticker === 'CVX') log(`Testing proxy ${i+1}: ${proxyUrl.substring(0,60)}...`, 'info');
+      const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(8000)});
+      if (!r.ok) { log(`Proxy ${i+1} HTTP ${r.status} for ${ticker}`, 'warn'); continue; }
+      const d = await r.json();
+      if (d.chart && d.chart.result) {
+        if (workingProxyIdx !== i) {
+          workingProxyIdx = i;
+          log(`✓ Proxy ${i+1} working for ${ticker}`, 'ok');
+        }
+        return d;
+      }
+      log(`Proxy ${i+1} bad response for ${ticker}`, 'warn');
+    } catch(e) {
+      log(`Proxy ${i+1} failed for ${ticker}: ${e.message}`, 'warn');
+    }
+  }
+  throw new Error(`All proxies failed for ${ticker}`);
+}
+
+async function fetchBars(ticker) {
+  const d = await fetchWithProxy(ticker);
+  const res = d.chart.result[0];
+  const q = res.indicators.quote[0];
+  const bars = [];
+  for (let i = 0; i < res.timestamp.length; i++) {
+    if (q.close[i] && q.volume[i] && q.high[i] && q.low[i]) {
+      bars.push({c:q.close[i], v:q.volume[i], h:q.high[i], l:q.low[i]});
+    }
+  }
+  return bars;
+}
+
+function sma(arr, n) {
+  if (arr.length < n) return null;
+  const s = arr.slice(-n);
+  return s.reduce((a,b)=>a+b,0)/n;
+}
+
+function analyzeSetup(ticker, name, sector, bars) {
+  if (bars.length < 30) return null;
+  const closes=bars.map(b=>b.c), vols=bars.map(b=>b.v),
+        highs=bars.map(b=>b.h), lows=bars.map(b=>b.l);
+  const price=closes[closes.length-1];
+  const sma30=sma(closes,30), sma30prev=sma(closes.slice(0,-1),30);
+  if (!sma30||!sma30prev) return null;
+
+  const smaRising=sma30>sma30prev;
+  const aboveSma=price>sma30;
+  const high52=Math.max(...highs.slice(-52)), low52=Math.min(...lows.slice(-52));
+  const rangePos=(price-low52)/(high52-low52);
+  const avgVol=sma(vols,10);
+  const volRatio=vols[vols.length-1]/avgVol;
+
+  let baseDur=0;
+  const band=(high52-low52)*0.4;
+  for (let i=closes.length-1;i>=0;i--) {
+    if (Math.abs(closes[i]-price)<band) baseDur++;
+    else break;
+  }
+
+  const criteria={
+    stage:    aboveSma&&smaRising?30:(aboveSma||smaRising?18:0),
+    smaDir:   smaRising?25:(sma30>sma30prev*0.998?12:0),
+    volume:   volRatio>=1.5?20:(volRatio>=1.1?10:0),
+    rangePos: rangePos>0.75?15:(rangePos>0.5?8:0),
+    baseDur:  baseDur>=26?10:(baseDur>=13?5:0),
+  };
+  const score=Object.values(criteria).reduce((a,b)=>a+b,0);
+
+  const baseRange=high52-low52;
+  const target1=high52+baseRange*0.618;
+  const target2=high52+baseRange*1.0;
+  const target3=high52+baseRange*1.618;
+  const stopLevel=price-(price-low52)*0.30;
+  const risk=price-stopLevel, reward=target1-price;
+  const rrRatio=risk>0?reward/risk:0;
+  const upside=((target1-price)/price)*100;
+
+  let wyckoff,wyCls;
+  if(rangePos>0.90&&volRatio>1.5){wyckoff='Phase E';wyCls='phase-e';}
+  else if(rangePos>0.75&&smaRising){wyckoff='LPS';wyCls='phase-lps';}
+  else if(rangePos>0.60&&volRatio>1.2){wyckoff='SOS';wyCls='phase-sos';}
+  else if(rangePos<0.35){wyckoff='Spring';wyCls='phase-spring';}
+  else{wyckoff='Phase B';wyCls='phase-b';}
+
+  let conviction,stripeClass,badgeClass,badgeLabel;
+  if(score>=75&&rrRatio>=2.5){conviction='fire';stripeClass='stripe-fire';badgeClass='badge-fire';badgeLabel='🔥 ACT NOW';}
+  else if(score>=50){conviction='wait';stripeClass='stripe-wait';badgeClass='badge-waitfor';badgeLabel='⏳ WAIT';}
+  else if(score>=30){conviction='watch';stripeClass='stripe-watch';badgeClass='badge-watch2';badgeLabel='👁 WATCH';}
+  else{conviction='avoid';stripeClass='stripe-avoid';badgeClass='badge-avoid2';badgeLabel='🚫 AVOID';}
+
+  const waitFor=[], fireReason=[];
+  if(!aboveSma) waitFor.push('Price must close above 30W SMA ($'+sma30.toFixed(2)+')');
+  else fireReason.push('Price above 30W SMA ✓');
+  if(!smaRising) waitFor.push('30W SMA must begin rising (currently flat/down)');
+  else fireReason.push('30W SMA rising ✓');
+  if(volRatio<1.5) waitFor.push('Need vol ≥1.5× avg (current: '+volRatio.toFixed(2)+'×) — wait for surge');
+  else fireReason.push('Volume '+volRatio.toFixed(2)+'× confirmed ✓');
+  if(rangePos<0.75) waitFor.push('Range pos '+((rangePos)*100).toFixed(0)+'% — needs >75% (near highs)');
+  else fireReason.push('Range position '+((rangePos)*100).toFixed(0)+'% ✓');
+  if(baseDur<26) waitFor.push('Base '+baseDur+' wks — stronger if ≥26 wks');
+  else fireReason.push('Base '+baseDur+' weeks ✓');
+  if(rrRatio<2.5) waitFor.push('R:R '+rrRatio.toFixed(1)+':1 — needs ≥2.5:1 at LPS entry');
+
+  return {ticker,name,sector,price,sma30,score,criteria,
+    conviction,stripeClass,badgeClass,badgeLabel,
+    wyckoff,wyCls,high52,low52,baseRange,baseDur,volRatio,rangePos,
+    target1,target2,target3,stopLevel,rrRatio,upside,waitFor,fireReason};
+}
+
+const UNIVERSE=[
+  {t:'CVX',n:'Chevron',s:'Energy'},{t:'XOM',n:'Exxon Mobil',s:'Energy'},
+  {t:'BKR',n:'Baker Hughes',s:'Energy'},{t:'HAL',n:'Halliburton',s:'Energy'},
+  {t:'OXY',n:'Occidental',s:'Energy'},{t:'DVN',n:'Devon Energy',s:'Energy'},
+  {t:'MPC',n:'Marathon Petroleum',s:'Energy'},
+  {t:'GDX',n:'Gold Miners ETF',s:'Gold'},{t:'NEM',n:'Newmont',s:'Gold'},
+  {t:'GOLD',n:'Barrick Gold',s:'Gold'},{t:'AEM',n:'Agnico Eagle',s:'Gold'},
+  {t:'WPM',n:'Wheaton Precious',s:'Gold'},{t:'GDXJ',n:'Jr Gold Miners ETF',s:'Gold'},
+  {t:'LMT',n:'Lockheed Martin',s:'Defense'},{t:'NOC',n:'Northrop Grumman',s:'Defense'},
+  {t:'RTX',n:'RTX Corp',s:'Defense'},{t:'GD',n:'General Dynamics',s:'Defense'},
+  {t:'LDOS',n:'Leidos Holdings',s:'Defense'},{t:'BAH',n:'Booz Allen Hamilton',s:'Defense'},
+  {t:'CAT',n:'Caterpillar',s:'Industrials'},{t:'GE',n:'GE Aerospace',s:'Industrials'},
+  {t:'ETN',n:'Eaton Corp',s:'Industrials'},{t:'PWR',n:'Quanta Services',s:'Industrials'},
+  {t:'PLTR',n:'Palantir',s:'Tech'},{t:'ORCL',n:'Oracle',s:'Tech'},
+  {t:'IBM',n:'IBM',s:'Tech'},{t:'NOW',n:'ServiceNow',s:'Tech'},
+  {t:'DBC',n:'DB Commodity ETF',s:'Commodities'},{t:'FCX',n:'Freeport-McMoRan',s:'Commodities'},
+  {t:'NUE',n:'Nucor Corp',s:'Commodities'},{t:'CF',n:'CF Industries',s:'Commodities'},
+  {t:'UNH',n:'UnitedHealth',s:'Healthcare'},{t:'LLY',n:'Eli Lilly',s:'Healthcare'},
+  {t:'ABBV',n:'AbbVie',s:'Healthcare'},{t:'MCK',n:'McKesson',s:'Healthcare'},
+];
+
+let allResults=[], currentSector='ALL';
+
+function convCard(r) {
+  const isFire=r.conviction==='fire';
+  const items=isFire?r.fireReason:r.waitFor;
+  const boxClass=isFire?'fire-box':'';
+  const dotCls=isFire?'dot-green':'dot-orange';
+  const titleCls=isFire?'wf-green':'wf-orange';
+  const titleTxt=isFire?'WHY HIGH CONVICTION':'WHAT YOU'RE WAITING FOR';
+  const rrColor=r.rrRatio>=3?'var(--green)':r.rrRatio>=2?'var(--accent)':'var(--red)';
+  const scoreColor=r.conviction==='fire'?'var(--green)':r.conviction==='wait'?'var(--orange)':'var(--blue)';
+  const safeR=JSON.stringify(r).replace(/"/g,"'");
+  return `
+  <div class="setup-card" onclick='loadFib(${safeR})'>
+    <div class="conv-stripe ${r.stripeClass}"></div>
+    <div class="card-inner">
+      <div>
+        <div class="conv-badge ${r.badgeClass}">${r.badgeLabel}</div>
+        <div class="ticker-sym">${r.ticker}</div>
+        <div class="ticker-name">${r.sector}</div>
+      </div>
+      <div class="setup-info">
+        <h3>${r.name}</h3>
+        <span class="pattern-tag">Cup Breakout</span><span class="pattern-tag">${r.wyckoff}</span>
+        <div class="sector-mini">Base: ~${r.baseDur}wks · Vol: ${r.volRatio.toFixed(2)}× · Score: ${r.score}/100</div>
+      </div>
+      <div class="waitfor-box ${boxClass}">
+        <div class="waitfor-title ${titleCls}">${titleTxt}</div>
+        <div class="waitfor-items">${items.slice(0,3).map(it=>`
+          <div class="waitfor-item"><div class="wf-dot ${dotCls}"></div><span>${it}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="price-col">
+        <div class="price-label">Price · 30W SMA</div>
+        <div class="price-val">$${r.price.toFixed(2)}</div>
+        <div class="price-sub">SMA: $${r.sma30.toFixed(2)}</div>
+      </div>
+      <div class="price-col">
+        <div class="price-label">Entry · Stop</div>
+        <div class="price-val" style="color:var(--green)">$${r.price.toFixed(2)}</div>
+        <div class="price-sub" style="color:var(--red)">↓ $${r.stopLevel.toFixed(2)}</div>
+      </div>
+      <div class="rr-box">
+        <div class="price-label" style="text-align:center;">R:R · Upside</div>
+        <div class="rr-val" style="color:${rrColor}">${r.rrRatio.toFixed(1)}:1</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700;">+${r.upside.toFixed(1)}%</div>
+        <div class="score-bar" style="margin-top:5px;"><div class="score-fill" style="width:${r.score}%;background:${scoreColor}"></div></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:center;">${r.score}/100</div>
+      </div>
+      <div class="action-col">
+        <button class="action-btn ${r.conviction==='fire'?'btn-fire':r.conviction==='wait'?'btn-wait':'btn-watch2'}">
+          ${r.conviction==='fire'?'✅ ENTER TRADE':r.conviction==='wait'?'⏳ SET ALERT':'👁 WATCHLIST'}
+        </button>
+        <div class="leap-tag">Jan 2027 $${Math.floor(r.price/5)*5}C</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAll(results) {
+  const f=r=>currentSector==='ALL'||r.sector===currentSector;
+  const fire=results.filter(r=>r.conviction==='fire'&&f(r)).sort((a,b)=>b.score-a.score);
+  const wait=results.filter(r=>r.conviction==='wait'&&f(r)).sort((a,b)=>b.score-a.score);
+  const watch=results.filter(r=>r.conviction==='watch'&&f(r)).sort((a,b)=>b.score-a.score).slice(0,8);
+
+  document.getElementById('fire-chips').innerHTML=fire.length
+    ?fire.map(r=>`<span class="conv-chip chip-green">🔥 ${r.ticker}</span>`).join('')
+    :'<span class="chip-empty">No high conviction setups in this filter</span>';
+  document.getElementById('wait-chips').innerHTML=wait.length
+    ?wait.slice(0,8).map(r=>`<span class="conv-chip chip-orange">⏳ ${r.ticker}</span>`).join('')
+    :'<span class="chip-empty">No wait-for setups in this filter</span>';
+
+  document.getElementById('st-fire').textContent=fire.length;
+  document.getElementById('st-wait').textContent=wait.length;
+  document.getElementById('st-watch').textContent=watch.length;
+  document.getElementById('st-rr').textContent=fire.length?(fire.reduce((a,r)=>a+r.rrRatio,0)/fire.length).toFixed(1)+':1':'—';
+  document.getElementById('st-up').textContent=fire.length?'+'+((fire.reduce((a,r)=>a+r.upside,0)/fire.length).toFixed(1))+'%':'—';
+  document.getElementById('fire-badge').textContent=fire.length+' setups · Enter now';
+  document.getElementById('wait-badge').textContent=wait.length+' setups · Criteria pending';
+  document.getElementById('watch-badge').textContent=watch.length+' stocks · Building bases';
+
+  const empty=(icon,t,s)=>`<div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--muted);"><div style="font-size:24px;margin-bottom:6px;">${icon}</div><div style="font-weight:700;">${t}</div><div style="font-size:12px;">${s}</div></div>`;
+  document.getElementById('fire-grid').innerHTML=fire.length?fire.map(convCard).join(''):empty('🔥','No high conviction setups','All criteria not yet met — patience is your edge');
+  document.getElementById('wait-grid').innerHTML=wait.length?wait.map(convCard).join(''):empty('⏳','No wait-for setups in this sector','Try All Sectors tab');
+  document.getElementById('watch-grid').innerHTML=watch.length?watch.map(convCard).join(''):empty('👁','No watchlist stocks','Try All Sectors tab');
+}
+
+function loadFib(r) {
+  document.getElementById('fib-label').textContent=r.ticker+' — '+r.name;
+  const e=r.price,s=r.stopLevel,b=r.high52,base=r.baseRange;
+  const rows=[
+    {lbl:'Stop Loss',price:s,cls:'fl-stop',desc:'Hard stop — exit if violated',pct:((s-e)/e*100).toFixed(1)+'%',act:'EXIT'},
+    {lbl:'Entry',price:e,cls:'fl-entry',desc:'LPS / breakout entry',pct:'0%',act:'BUY'},
+    {lbl:'0.618 Target',price:b+base*0.618,cls:'fl-t1',desc:'First partial — sell 30%',pct:'+'+(((b+base*0.618-e)/e)*100).toFixed(1)+'%',act:'SELL 30%'},
+    {lbl:'1.0 Target',price:r.target1,cls:'fl-t2',desc:'Measured move — sell 40%',pct:'+'+((r.target1-e)/e*100).toFixed(1)+'%',act:'SELL 40%'},
+    {lbl:'1.618 Ext.',price:r.target3,cls:'fl-t3',desc:'Full extension — trail stop',pct:'+'+((r.target3-e)/e*100).toFixed(1)+'%',act:'TRAIL'},
+    {lbl:'LEAP Strike',price:Math.floor(e/5)*5,cls:'fl-entry',desc:'Nearest ITM strike (70-80Δ)',pct:'ITM',act:'JAN 2027'},
+  ];
+  document.getElementById('fib-tbody').innerHTML=rows.map(row=>`
+    <tr><td><span class="fib-level ${row.cls}">${row.lbl}</span></td>
+    <td style="font-weight:700;">$${parseFloat(row.price).toFixed(2)}</td>
+    <td style="color:var(--muted);font-size:11px;">${row.desc}</td>
+    <td style="font-weight:700;">${row.pct}</td>
+    <td>${row.act}</td></tr>`).join('');
+  document.getElementById('lc-e').value=e.toFixed(2);
+  document.getElementById('lc-t').value=r.target1.toFixed(2);
+  document.getElementById('lc-s').value=s.toFixed(2);
+  calcLeap();
+  showToast('✅ '+r.ticker+' loaded — Fibonacci & LEAP calc updated below');
+}
+
+function calcLeap(){
+  const e=+document.getElementById('lc-e').value||0,
+        t=+document.getElementById('lc-t').value||0,
+        s=+document.getElementById('lc-s').value||0,
+        p=+document.getElementById('lc-p').value||0,
+        c=+document.getElementById('lc-c').value||1;
+  document.getElementById('lc-risk').textContent='$'+(p*c*100).toLocaleString();
+  document.getElementById('lc-move').textContent=e>0?'+'+(((t-e)/e)*100).toFixed(1)+'%':'—';
+  document.getElementById('lc-rr').textContent=(e>s?((t-e)/(e-s)).toFixed(2):'—')+':1';
+  document.getElementById('lc-profit').textContent='+$'+Math.round((t-e)*0.75*c*100).toLocaleString();
+}
+
+function filterSector(sec,el){
+  currentSector=sec;
+  document.querySelectorAll('.sector-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(allResults.length) renderAll(allResults);
+}
+
+async function runScan(){
+  const btn=document.getElementById('scan-btn');
+  btn.disabled=true; btn.textContent='⏳ Scanning...';
+  document.getElementById('loading').classList.add('active');
+  document.getElementById('debug-log').innerHTML='';
+  allResults=[];
+  workingProxyIdx=-1;
+  let success=0, failed=0;
+  log('Starting scan of '+UNIVERSE.length+' stocks...','info');
+
+  for(let i=0;i<UNIVERSE.length;i++){
+    const st=UNIVERSE[i];
+    document.getElementById('loading-sub').textContent='Analyzing '+st.t+' ('+st.s+')';
+    document.getElementById('loading-bar').style.width=Math.round((i+1)/UNIVERSE.length*100)+'%';
+    document.getElementById('loading-count').textContent=(i+1)+' of '+UNIVERSE.length+' stocks · '+success+' analyzed · '+failed+' failed';
+    try{
+      const bars=await fetchBars(st.t);
+      const res=analyzeSetup(st.t,st.n,st.s,bars);
+      if(res){allResults.push(res);success++;}
+    }catch(e){
+      failed++;
+      log('✗ '+st.t+': '+e.message,'err');
+    }
+    await new Promise(r=>setTimeout(r,150));
+  }
+
+  document.getElementById('loading').classList.remove('active');
+  btn.disabled=false; btn.textContent='🔄 Re-Scan';
+  document.getElementById('last-updated').textContent='Last scan: '+new Date().toLocaleTimeString();
+  log('Scan complete: '+success+' analyzed, '+failed+' failed','ok');
+
+  if(success===0){
+    log('ALL PROXIES FAILED — Yahoo Finance may be blocking all proxies. Try again in a few minutes.','err');
+    showToast('⚠️ Scan failed — see diagnostics panel below header');
+  } else {
+    const fireCount=allResults.filter(r=>r.conviction==='fire').length;
+    renderAll(allResults);
+    showToast('✅ Scan done · 🔥 '+fireCount+' high conviction setups found');
+  }
+  calcLeap();
+}
+
+function showToast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),4000);
+}
+calcLeap();
+</script>
+</body>
+</html>
